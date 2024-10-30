@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using TASK_SYS.Areas.Identity.Data;
 using TASK_SYS.Data;
 using TASK_SYS.Models;
+using TASK_SYS.Services.Interfaces;
 
 namespace TASK_SYS.Controllers
 {
@@ -18,13 +19,13 @@ namespace TASK_SYS.Controllers
     {
         private readonly AuthDbContext _context;
         private readonly UserManager<ApplicationUser> _usermanager;
+        private readonly ITaskService _taskService;
 
-
-        public TasksController(AuthDbContext context, UserManager<ApplicationUser> userManager)
+        public TasksController(AuthDbContext context, UserManager<ApplicationUser> userManager, ITaskService taskService)
         {
             _context = context;
             _usermanager = userManager;
-
+            _taskService = taskService;
         }
 
         // GET: Tasks
@@ -175,5 +176,46 @@ namespace TASK_SYS.Controllers
         {
             return _context.Tasks.Any(e => e.Id == id);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTasks()
+        {
+            var tasks = await _taskService.GetTasksAsync();
+            return Ok(tasks);
+        }
+
+        // Get task by Id
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTask(int id)
+        {
+            var task = await _taskService.GetTaskByIdAsync(id);
+            if (task == null) return NotFound();
+            return Ok(task);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateTask([FromBody] Task task)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            await _taskService.CreateTaskAsync(task);
+            return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTask(int id, [FromBody] Task task)
+        {
+            if (id != task.Id) return BadRequest();
+            await _taskService.UpdateTaskAsync(task);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTask(int id)
+        {
+            await _taskService.DeleteTaskAsync(id);
+            return NoContent();
+        }
     }
+}
+
 }
